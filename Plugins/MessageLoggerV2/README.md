@@ -1,4 +1,4 @@
-# MessageLoggerV2 1.10.4 — Unofficial Compatibility Fork
+# MessageLoggerV2 1.10.4 - Unofficial Compatibility Fork
 
 An unofficial compatibility fork of **MessageLoggerV2**, originally created by [Lighty](https://github.com/1Lighty).
 
