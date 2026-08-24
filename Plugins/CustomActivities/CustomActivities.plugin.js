@@ -1,7 +1,7 @@
 /**
  * @name CustomActivities
  * @author Haxurus
- * @version 1.1.0
+ * @version 1.2.0
  * @description Create, save and switch fully customized Discord Rich Presence activities directly from BetterDiscord.
  */
 
@@ -16,22 +16,20 @@ module.exports = class CustomActivities {
             profiles: []
         };
 
-        this.settings = Object.assign(
-            {},
-            this.defaults,
-            BdApi.Data?.load?.(this.name, "settings") || BdApi.loadData?.(this.name, "settings") || {}
-        );
-
+        this.settings = Object.assign({}, this.defaults, BdApi.Data?.load?.(this.name, "settings") || {});
         if (!Array.isArray(this.settings.profiles)) this.settings.profiles = [];
 
         this.currentProfileId = null;
         this.editingProfileId = this.settings.activeProfileId || this.settings.profiles[0]?.id || null;
-        this.originalHandler = null;
         this.action = null;
         this.startedAt = null;
+        this.allowPresenceDispatch = false;
+        this.protectionUnpatch = null;
+
         this.quickObserver = null;
         this.quickButton = null;
         this.quickTooltip = null;
+        this.quickObserverFrame = null;
     }
 
     start() {
@@ -44,26 +42,26 @@ module.exports = class CustomActivities {
     }
 
     stop() {
-        this.quickObserver?.disconnect();
-        this.quickObserver = null;
+        this.stopQuickButtonObserver();
         this.removeQuickButton();
-        this.removeStyles();
-        this.clear(false);
+        this.clear(false).finally(() => {
+            this.removeProtection();
+            BdApi.Patcher?.unpatchAll?.(this.name);
+            this.removeStyles();
+        });
     }
 
     save() {
-        if (BdApi.Data?.save) BdApi.Data.save(this.name, "settings", this.settings);
-        else BdApi.saveData?.(this.name, "settings", this.settings);
+        BdApi.Data?.save?.(this.name, "settings", this.settings);
     }
 
     toast(message, type = "info") {
-        if (BdApi.UI?.showToast) BdApi.UI.showToast(message, {type});
-        else BdApi.showToast?.(message, {type});
+        BdApi.UI?.showToast?.(message, {type});
     }
 
     module(predicate) {
         try {
-            return BdApi.Webpack?.getModule?.(predicate, {searchExports: true}) || BdApi.findModule?.(predicate) || null;
+            return BdApi.Webpack?.getModule?.(predicate, {searchExports: true}) || null;
         }
         catch {
             return null;
@@ -202,7 +200,7 @@ module.exports = class CustomActivities {
                 encoding: socket.encoding || "json",
                 application: {
                     id: profile.clientId.trim(),
-                    name: activityName,
+                    name: application.name || activityName,
                     icon: application.icon ?? null,
                     coverImage: application.coverImage ?? null,
                     flags: application.flags ?? 0
@@ -214,6 +212,46 @@ module.exports = class CustomActivities {
                 activity
             }
         };
+    }
+
+    async dispatchPresence(payload) {
+        if (!this.action || typeof this.action.handler !== "function") {
+            throw new Error("Discord SET_ACTIVITY handler is unavailable.");
+        }
+
+        this.allowPresenceDispatch = true;
+        try {
+            return await this.action.handler(payload);
+        }
+        finally {
+            this.allowPresenceDispatch = false;
+        }
+    }
+
+    installProtection() {
+        this.removeProtection();
+        if (!this.settings.protectActivity || !this.action) return;
+
+        this.protectionUnpatch = BdApi.Patcher?.instead?.(
+            this.name,
+            this.action,
+            "handler",
+            (_thisObject, args, originalFunction) => {
+                const payload = args?.[0];
+                if (this.allowPresenceDispatch || payload?.cmd !== "SET_ACTIVITY") {
+                    return originalFunction(...args);
+                }
+                return undefined;
+            }
+        ) || null;
+    }
+
+    removeProtection() {
+        if (typeof this.protectionUnpatch === "function") {
+            try { this.protectionUnpatch(); }
+            catch (error) { console.warn(`[${this.name}] Failed to remove presence protection`, error); }
+        }
+        this.protectionUnpatch = null;
     }
 
     async activate(id, silent = false) {
@@ -228,27 +266,17 @@ module.exports = class CustomActivities {
             }
 
             const socket = await this.socket(profile.clientId.trim());
-            const action = this.getAction();
-            if (!action) throw new Error("Discord SET_ACTIVITY handler was not found.");
-
-            if (!this.originalHandler || this.action !== action) {
-                this.action = action;
-                this.originalHandler = action.handler;
-            }
-
-            if (typeof this.originalHandler !== "function") {
-                throw new Error("Discord SET_ACTIVITY handler is unavailable.");
-            }
+            this.action = this.getAction();
+            if (!this.action) throw new Error("Discord SET_ACTIVITY handler was not found.");
 
             this.startedAt = Date.now();
-            if (this.settings.protectActivity) action.handler = () => {};
-
-            await this.originalHandler.call(action, this.event(profile, socket));
+            await this.dispatchPresence(this.event(profile, socket));
 
             this.currentProfileId = id;
             this.settings.activeProfileId = id;
             this.editingProfileId = id;
             this.save();
+            this.installProtection();
             this.syncQuickButton();
 
             if (!silent) this.toast(`Activity "${profile.profileName}" is now active.`, "success");
@@ -256,21 +284,17 @@ module.exports = class CustomActivities {
         }
         catch (error) {
             console.error(`[${this.name}]`, error);
-            this.restoreHandler();
+            this.removeProtection();
             this.syncQuickButton();
             this.toast(error?.message || "Failed to activate custom activity.", "error");
             return false;
         }
     }
 
-    restoreHandler() {
-        if (this.action && this.originalHandler) this.action.handler = this.originalHandler;
-    }
-
     async clear(show = true) {
         try {
-            if (this.originalHandler && this.action) {
-                await this.originalHandler.call(this.action, {
+            if (this.action) {
+                await this.dispatchPresence({
                     socket: {transport: "ipc"},
                     cmd: "SET_ACTIVITY",
                     args: {pid: require("process").pid}
@@ -280,39 +304,50 @@ module.exports = class CustomActivities {
         catch (error) {
             console.warn(`[${this.name}] Failed to clear activity`, error);
         }
-
-        this.restoreHandler();
-        this.currentProfileId = null;
-        this.startedAt = null;
-        this.syncQuickButton();
+        finally {
+            this.removeProtection();
+            this.currentProfileId = null;
+            this.startedAt = null;
+            this.action = null;
+            this.syncQuickButton();
+        }
 
         if (show) this.toast("Custom activity stopped.", "success");
     }
 
     injectStyles() {
         const css = `
+            .ca-root,
+            .ca-root * { box-sizing: border-box; }
+
             .ca-root {
-                box-sizing: border-box;
                 width: 100%;
                 color: var(--text-normal);
                 font-family: var(--font-primary, sans-serif);
             }
 
-            .ca-root * { box-sizing: border-box; }
+            .ca-modal-host {
+                width: clamp(420px, 62vw, 760px);
+                max-width: calc(100vw - 96px);
+                max-height: 70vh;
+                overflow: auto;
+                padding: 2px 5px 2px 0;
+            }
 
             .ca-hero {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 14px;
-                padding: 16px;
-                margin-bottom: 14px;
+                margin-bottom: 12px;
+                padding: 15px;
                 border: 1px solid var(--background-modifier-accent);
                 border-radius: 12px;
                 background: var(--background-secondary);
             }
 
             .ca-hero-copy { min-width: 0; }
+
             .ca-title {
                 margin: 0;
                 color: var(--header-primary);
@@ -322,9 +357,9 @@ module.exports = class CustomActivities {
             }
 
             .ca-subtitle {
-                margin: 5px 0 0;
+                margin: 4px 0 0;
                 color: var(--text-muted);
-                font-size: 13px;
+                font-size: 12px;
                 line-height: 1.45;
             }
 
@@ -337,15 +372,15 @@ module.exports = class CustomActivities {
                 border-radius: 999px;
                 background: var(--background-tertiary);
                 color: var(--text-muted);
-                font-size: 12px;
+                font-size: 11px;
                 font-weight: 700;
                 white-space: nowrap;
             }
 
             .ca-status-dot {
-                width: 8px;
-                height: 8px;
-                border-radius: 999px;
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
                 background: var(--text-muted);
             }
 
@@ -355,34 +390,36 @@ module.exports = class CustomActivities {
             .ca-global-grid {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 10px;
-                margin-bottom: 14px;
+                gap: 9px;
+                margin-bottom: 12px;
             }
 
             .ca-switch-row {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 14px;
-                min-height: 58px;
-                padding: 11px 12px;
+                gap: 12px;
+                min-height: 56px;
+                padding: 10px 11px;
                 border: 1px solid var(--background-modifier-accent);
                 border-radius: 10px;
                 background: var(--background-secondary);
                 cursor: pointer;
+                user-select: none;
             }
 
             .ca-switch-copy { min-width: 0; }
+
             .ca-switch-title {
                 color: var(--header-primary);
-                font-size: 13px;
-                font-weight: 650;
+                font-size: 12px;
+                font-weight: 700;
             }
 
             .ca-switch-description {
                 margin-top: 2px;
                 color: var(--text-muted);
-                font-size: 11px;
+                font-size: 10px;
                 line-height: 1.35;
             }
 
@@ -414,36 +451,36 @@ module.exports = class CustomActivities {
             .ca-profile-bar {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 7px;
                 overflow-x: auto;
-                padding: 2px 0 10px;
-                margin-bottom: 4px;
+                padding: 1px 0 9px;
                 scrollbar-width: thin;
             }
 
             .ca-profile-tab {
                 display: inline-flex;
                 align-items: center;
-                gap: 7px;
+                gap: 6px;
                 flex: 0 0 auto;
-                min-height: 34px;
+                min-height: 32px;
                 max-width: 190px;
-                padding: 7px 10px;
+                padding: 6px 9px;
                 border: 1px solid var(--background-modifier-accent);
-                border-radius: 9px;
+                border-radius: 8px;
                 background: var(--background-secondary);
                 color: var(--text-muted);
                 font: inherit;
-                font-size: 12px;
-                font-weight: 650;
+                font-size: 11px;
+                font-weight: 700;
                 cursor: pointer;
             }
 
             .ca-profile-tab:hover { background: var(--background-modifier-hover); }
+
             .ca-profile-tab.is-selected {
                 border-color: var(--brand-500, #5865f2);
+                background: var(--background-modifier-selected);
                 color: var(--header-primary);
-                background: color-mix(in srgb, var(--brand-500, #5865f2) 16%, var(--background-secondary));
             }
 
             .ca-profile-tab-name {
@@ -472,17 +509,17 @@ module.exports = class CustomActivities {
                 align-items: center;
                 justify-content: space-between;
                 gap: 12px;
-                padding: 14px 15px;
+                padding: 12px 14px;
                 border-bottom: 1px solid var(--background-modifier-accent);
                 background: var(--background-secondary-alt, var(--background-secondary));
             }
 
             .ca-editor-title {
                 min-width: 0;
-                color: var(--header-primary);
-                font-size: 15px;
-                font-weight: 700;
                 overflow: hidden;
+                color: var(--header-primary);
+                font-size: 14px;
+                font-weight: 700;
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
@@ -490,42 +527,41 @@ module.exports = class CustomActivities {
             .ca-actions {
                 display: flex;
                 align-items: center;
-                gap: 7px;
-                flex-wrap: wrap;
                 justify-content: flex-end;
+                gap: 6px;
+                flex-wrap: wrap;
             }
 
             .ca-button {
-                min-height: 32px;
-                padding: 6px 11px;
+                min-height: 31px;
+                padding: 6px 10px;
                 border: 0;
                 border-radius: 7px;
                 background: var(--brand-500, #5865f2);
                 color: white;
                 font: inherit;
-                font-size: 12px;
-                font-weight: 650;
+                font-size: 11px;
+                font-weight: 700;
                 cursor: pointer;
             }
 
-            .ca-button:hover { filter: brightness(1.08); }
-            .ca-button.secondary {
-                background: var(--background-modifier-selected);
-                color: var(--header-primary);
-            }
-            .ca-button.danger { background: var(--status-danger, #da373c); }
+            .ca-button:hover:not(:disabled) { filter: brightness(1.08); }
+            .ca-button:disabled { cursor: not-allowed; opacity: .45; }
+            .ca-button.secondary { background: var(--background-modifier-selected); color: var(--header-primary); }
             .ca-button.positive { background: var(--status-positive, #23a55a); }
+            .ca-button.danger { background: var(--status-danger, #da373c); }
 
             .ca-section {
-                padding: 14px 15px 15px;
+                padding: 13px 14px 14px;
                 border-bottom: 1px solid var(--background-modifier-accent);
             }
+
             .ca-section:last-child { border-bottom: 0; }
 
             .ca-section-heading {
-                margin: 0 0 10px;
+                margin: 0 0 9px;
                 color: var(--header-secondary);
-                font-size: 11px;
+                font-size: 10px;
                 font-weight: 800;
                 letter-spacing: .05em;
                 text-transform: uppercase;
@@ -534,7 +570,7 @@ module.exports = class CustomActivities {
             .ca-grid {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 11px 12px;
+                gap: 10px 11px;
             }
 
             .ca-field {
@@ -548,7 +584,7 @@ module.exports = class CustomActivities {
 
             .ca-field-label {
                 color: var(--header-secondary);
-                font-size: 11px;
+                font-size: 10px;
                 line-height: 1.25;
                 font-weight: 750;
             }
@@ -563,7 +599,7 @@ module.exports = class CustomActivities {
             .ca-input,
             .ca-select {
                 width: 100%;
-                min-height: 36px;
+                min-height: 35px;
                 padding: 7px 9px;
                 border: 1px solid transparent;
                 border-radius: 7px;
@@ -571,58 +607,50 @@ module.exports = class CustomActivities {
                 background: var(--input-background, var(--background-tertiary));
                 color: var(--text-normal);
                 font: inherit;
-                font-size: 13px;
+                font-size: 12px;
             }
 
             .ca-input:focus,
-            .ca-select:focus {
-                border-color: var(--brand-500, #5865f2);
-            }
-
-            .ca-empty {
-                display: grid;
-                place-items: center;
-                gap: 9px;
-                min-height: 150px;
-                padding: 24px;
-                border: 1px dashed var(--background-modifier-accent);
-                border-radius: 12px;
-                background: var(--background-secondary);
-                text-align: center;
-                color: var(--text-muted);
-            }
-
-            .ca-empty strong {
-                color: var(--header-primary);
-                font-size: 14px;
-            }
+            .ca-select:focus { border-color: var(--brand-500, #5865f2); }
 
             .ca-inline-toggle {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 12px;
-                min-height: 36px;
+                min-height: 35px;
                 padding: 7px 9px;
                 border-radius: 7px;
                 background: var(--input-background, var(--background-tertiary));
                 cursor: pointer;
+                user-select: none;
             }
 
-            .ca-inline-toggle span:first-child {
+            .ca-inline-toggle.full { grid-column: 1 / -1; }
+
+            .ca-inline-toggle > span {
                 color: var(--text-normal);
-                font-size: 12px;
-                font-weight: 600;
+                font-size: 11px;
+                font-weight: 650;
             }
 
-            .ca-quick-button {
-                position: relative !important;
+            .ca-empty {
+                display: grid;
+                place-items: center;
+                gap: 8px;
+                min-height: 145px;
+                padding: 24px;
+                border: 1px dashed var(--background-modifier-accent);
+                border-radius: 12px;
+                background: var(--background-secondary);
+                color: var(--text-muted);
+                text-align: center;
             }
 
-            .ca-quick-button svg {
-                width: 20px;
-                height: 20px;
-            }
+            .ca-empty strong { color: var(--header-primary); font-size: 13px; }
+
+            .ca-quick-button { position: relative !important; }
+            .ca-quick-button svg { width: 20px; height: 20px; }
 
             .ca-quick-button.is-active::after {
                 content: "";
@@ -637,50 +665,80 @@ module.exports = class CustomActivities {
             }
 
             @media (max-width: 680px) {
+                .ca-modal-host { width: min(92vw, 520px); max-width: 92vw; }
                 .ca-global-grid,
                 .ca-grid { grid-template-columns: 1fr; }
-                .ca-field.full { grid-column: auto; }
+                .ca-field.full,
+                .ca-inline-toggle.full { grid-column: auto; }
                 .ca-hero,
                 .ca-editor-header { align-items: flex-start; flex-direction: column; }
                 .ca-actions { justify-content: flex-start; }
             }
         `;
 
-        if (BdApi.DOM?.addStyle) BdApi.DOM.addStyle(this.styleId, css);
-        else BdApi.injectCSS?.(this.styleId, css);
+        BdApi.DOM?.addStyle?.(this.styleId, css);
     }
 
     removeStyles() {
-        if (BdApi.DOM?.removeStyle) BdApi.DOM.removeStyle(this.styleId);
-        else BdApi.clearCSS?.(this.styleId);
+        BdApi.DOM?.removeStyle?.(this.styleId);
     }
 
     startQuickButtonObserver() {
         this.ensureQuickButton();
-        this.quickObserver = new MutationObserver(() => this.ensureQuickButton());
-        this.quickObserver.observe(document.body, {childList: true, subtree: true});
+
+        const root = document.getElementById("app-mount") || document.body;
+        if (!root || typeof MutationObserver === "undefined") return;
+
+        this.quickObserver = new MutationObserver(() => {
+            if (this.quickButton?.isConnected || this.quickObserverFrame !== null) return;
+
+            this.quickObserverFrame = requestAnimationFrame(() => {
+                this.quickObserverFrame = null;
+                this.ensureQuickButton();
+            });
+        });
+
+        this.quickObserver.observe(root, {childList: true, subtree: true});
+    }
+
+    stopQuickButtonObserver() {
+        this.quickObserver?.disconnect();
+        this.quickObserver = null;
+
+        if (this.quickObserverFrame !== null) {
+            cancelAnimationFrame(this.quickObserverFrame);
+            this.quickObserverFrame = null;
+        }
     }
 
     findUserPanelControls() {
-        const panel = document.querySelector('[class*="panels_"]');
-        if (!panel) return null;
+        const panels = [...document.querySelectorAll('[class*="panels_"]')];
+        if (!panels.length) return null;
 
-        const avatarWrapper = panel.querySelector('[class*="avatarWrapper_"]');
-        if (avatarWrapper?.parentElement) {
-            const directControls = avatarWrapper.parentElement.querySelector(':scope > [class*="buttons_"]');
-            if (directControls?.querySelectorAll("button").length >= 2) return directControls;
+        const panel = panels
+            .filter(element => element.getBoundingClientRect().height > 0)
+            .sort((a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom)[0] || panels[0];
+
+        const groups = [...panel.querySelectorAll('div[class*="buttons_"]')]
+            .map(element => ({element, buttons: [...element.querySelectorAll("button")]}))
+            .filter(item => item.buttons.length >= 2 && item.buttons.length <= 8);
+
+        if (!groups.length) return null;
+
+        const settingsPattern = /settings|impostazioni|paramètres|einstellungen|ajustes|configurações|instellingen|ustawienia|nastavení|ayarlar/i;
+
+        for (const group of groups) {
+            const settingsButton = group.buttons.find(button => {
+                const label = `${button.getAttribute("aria-label") || ""} ${button.getAttribute("title") || ""}`;
+                return settingsPattern.test(label);
+            });
+
+            if (settingsButton) return {group: group.element, referenceButton: settingsButton};
         }
 
-        const candidates = [...panel.querySelectorAll('div[class*="buttons_"]')]
-            .filter(element => element.querySelectorAll("button").length >= 2);
-
-        if (!candidates.length) return null;
-
-        return candidates.sort((a, b) => {
-            const vertical = b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom;
-            if (vertical !== 0) return vertical;
-            return b.querySelectorAll("button").length - a.querySelectorAll("button").length;
-        })[0];
+        groups.sort((a, b) => b.element.getBoundingClientRect().bottom - a.element.getBoundingClientRect().bottom);
+        const fallback = groups[0];
+        return {group: fallback.element, referenceButton: fallback.buttons[fallback.buttons.length - 1]};
     }
 
     ensureQuickButton() {
@@ -689,20 +747,20 @@ module.exports = class CustomActivities {
             return;
         }
 
-        const controls = this.findUserPanelControls();
-        if (!controls || controls.querySelector(".ca-quick-button")) return;
+        const target = this.findUserPanelControls();
+        if (!target?.referenceButton?.parentElement) return;
 
-        const nativeButtons = [...controls.querySelectorAll(":scope > button")];
-        const referenceButton = nativeButtons[nativeButtons.length - 1] || controls.querySelector("button");
-        if (!referenceButton) return;
+        const parent = target.referenceButton.parentElement;
+        if (parent.querySelector(".ca-quick-button")) return;
 
         const button = document.createElement("button");
         button.type = "button";
-        button.className = `${referenceButton.className || ""} ca-quick-button`.trim();
+        button.className = `${target.referenceButton.className || ""} ca-quick-button`.trim();
         button.setAttribute("aria-label", "Custom Activities");
+        button.setAttribute("title", "Custom Activities");
         button.innerHTML = `
             <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
-                <path d="M7.5 6A5.5 5.5 0 0 0 2 11.5v1A5.5 5.5 0 0 0 7.5 18c1.57 0 2.99-.66 4-1.72A5.46 5.46 0 0 0 15.5 18a5.5 5.5 0 0 0 5.5-5.5v-1A5.5 5.5 0 0 0 15.5 6c-1.23 0-2.37.4-3.29 1.08A5.48 5.48 0 0 0 7.5 6Zm0 2c.88 0 1.69.3 2.33.82l1.67 1.36 1.67-1.36A3.48 3.48 0 0 1 15.5 8a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1-3.5 3.5c-1.07 0-2.03-.48-2.68-1.23L11.5 13.25l-1.32 1.52A3.48 3.48 0 0 1 7.5 16 3.5 3.5 0 0 1 4 12.5v-1A3.5 3.5 0 0 1 7.5 8Zm-.75 2v1.25H5.5v1.5h1.25V14h1.5v-1.25H9.5v-1.5H8.25V10h-1.5Zm8.25 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>
+                <path d="M6.75 5.5A4.75 4.75 0 0 0 2 10.25v3.5A4.75 4.75 0 0 0 6.75 18.5c1.76 0 3.3-.96 4.12-2.38h2.26a4.74 4.74 0 0 0 4.12 2.38A4.75 4.75 0 0 0 22 13.75v-3.5a4.75 4.75 0 0 0-4.75-4.75c-1.5 0-2.84.7-3.7 1.8h-3.1a4.72 4.72 0 0 0-3.7-1.8Zm0 2c.96 0 1.8.51 2.28 1.27l.3.48h5.34l.3-.48a2.73 2.73 0 0 1 2.28-1.27A2.75 2.75 0 0 1 20 10.25v3.5a2.75 2.75 0 0 1-2.75 2.75 2.73 2.73 0 0 1-2.53-1.68l-.26-.7H9.54l-.26.7a2.73 2.73 0 0 1-2.53 1.68A2.75 2.75 0 0 1 4 13.75v-3.5A2.75 2.75 0 0 1 6.75 7.5ZM6 10v1.25H4.75v1.5H6V14h1.5v-1.25h1.25v-1.5H7.5V10H6Zm10.75.75a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/>
             </svg>
         `;
 
@@ -712,24 +770,26 @@ module.exports = class CustomActivities {
             this.openManager();
         });
 
-        if (referenceButton.parentElement === controls) controls.insertBefore(button, referenceButton);
-        else controls.appendChild(button);
-
+        parent.insertBefore(button, target.referenceButton);
         this.quickButton = button;
         this.syncQuickButton();
 
         try {
             this.quickTooltip = BdApi.UI?.createTooltip?.(button, "Custom Activities", {side: "top"}) || null;
         }
-        catch {}
+        catch (error) {
+            console.warn(`[${this.name}] Failed to create quick button tooltip`, error);
+        }
     }
 
     syncQuickButton() {
         if (!this.quickButton) return;
-        this.quickButton.classList.toggle("is-active", Boolean(this.currentProfileId));
+
+        const activeProfile = this.profile(this.currentProfileId);
+        this.quickButton.classList.toggle("is-active", Boolean(activeProfile));
         this.quickButton.setAttribute(
             "aria-label",
-            this.currentProfileId ? "Custom Activities - active" : "Custom Activities"
+            activeProfile ? `Custom Activities - ${activeProfile.profileName} active` : "Custom Activities"
         );
     }
 
@@ -741,26 +801,36 @@ module.exports = class CustomActivities {
         this.quickButton = null;
     }
 
+    createModalContent() {
+        const React = BdApi.React;
+        const plugin = this;
+
+        function ModalHost() {
+            const hostRef = React.useRef(null);
+
+            React.useEffect(() => {
+                const host = hostRef.current;
+                if (!host) return undefined;
+
+                const panel = plugin.getSettingsPanel();
+                host.replaceChildren(panel);
+
+                return () => panel.remove();
+            }, []);
+
+            return React.createElement("div", {className: "ca-modal-host", ref: hostRef});
+        }
+
+        return React.createElement(ModalHost);
+    }
+
     openManager() {
-        const panel = this.getSettingsPanel();
-
-        if (BdApi.UI?.showConfirmationModal) {
-            BdApi.UI.showConfirmationModal("Custom Activities", panel, {
-                confirmText: "Done",
-                cancelText: null
-            });
+        if (!BdApi.React || !BdApi.UI?.alert) {
+            this.toast("Unable to open the Custom Activities manager.", "error");
             return;
         }
 
-        if (BdApi.showConfirmationModal) {
-            BdApi.showConfirmationModal("Custom Activities", panel, {
-                confirmText: "Done",
-                cancelText: null
-            });
-            return;
-        }
-
-        this.toast("Unable to open the Custom Activities manager.", "error");
+        BdApi.UI.alert("Custom Activities", this.createModalContent());
     }
 
     getSettingsPanel() {
@@ -778,16 +848,11 @@ module.exports = class CustomActivities {
         }
 
         root.appendChild(this.buildHero());
-        root.appendChild(this.buildGlobalSettings());
+        root.appendChild(this.buildGlobalSettings(root));
         root.appendChild(this.buildProfileBar(root));
 
         const profile = this.profile(this.editingProfileId);
-        if (!profile) {
-            root.appendChild(this.buildEmptyState(root));
-            return;
-        }
-
-        root.appendChild(this.buildEditor(profile, root));
+        root.appendChild(profile ? this.buildEditor(profile, root) : this.buildEmptyState(root));
     }
 
     buildHero() {
@@ -822,14 +887,14 @@ module.exports = class CustomActivities {
         return hero;
     }
 
-    buildGlobalSettings() {
+    buildGlobalSettings(root) {
         const grid = document.createElement("div");
         grid.className = "ca-global-grid";
 
         grid.append(
             this.switchRow(
                 "Auto-start activity",
-                "Starts the selected profile when the plugin loads.",
+                "Starts the last activated profile when the plugin loads.",
                 this.settings.autoStart,
                 value => {
                     this.settings.autoStart = value;
@@ -838,14 +903,16 @@ module.exports = class CustomActivities {
             ),
             this.switchRow(
                 "Protect active presence",
-                "Prevents detected games from replacing your custom activity.",
+                "Prevents detected applications from replacing the custom Rich Presence while it is active.",
                 this.settings.protectActivity,
                 value => {
                     this.settings.protectActivity = value;
-                    if (this.currentProfileId && this.action && this.originalHandler) {
-                        this.action.handler = value ? (() => {}) : this.originalHandler;
-                    }
                     this.save();
+                    if (this.currentProfileId) {
+                        if (value) this.installProtection();
+                        else this.removeProtection();
+                    }
+                    this.renderManager(root);
                 }
             )
         );
@@ -861,6 +928,7 @@ module.exports = class CustomActivities {
             const tab = document.createElement("button");
             tab.type = "button";
             tab.className = `ca-profile-tab${profile.id === this.editingProfileId ? " is-selected" : ""}`;
+            tab.dataset.profileId = profile.id;
 
             if (profile.id === this.currentProfileId) {
                 const dot = document.createElement("span");
@@ -942,20 +1010,14 @@ module.exports = class CustomActivities {
             this.currentProfileId === profile.id ? "positive" : ""
         );
 
-        const stopButton = this.button(
-            "Stop",
-            async () => {
-                await this.clear(true);
-                this.renderManager(root);
-            },
-            "secondary"
-        );
+        const stopButton = this.button("Stop", async () => {
+            await this.clear(true);
+            this.renderManager(root);
+        }, "secondary");
         stopButton.disabled = !this.currentProfileId;
-        if (!this.currentProfileId) stopButton.style.opacity = "0.5";
 
         const deleteButton = this.button("Delete", async () => {
-            const deletingActive = this.currentProfileId === profile.id;
-            if (deletingActive) await this.clear(false);
+            if (this.currentProfileId === profile.id) await this.clear(false);
 
             this.settings.profiles = this.settings.profiles.filter(item => item.id !== profile.id);
             if (this.settings.activeProfileId === profile.id) this.settings.activeProfileId = null;
@@ -973,6 +1035,8 @@ module.exports = class CustomActivities {
             this.field("Profile name", profile.profileName, value => {
                 profile.profileName = value;
                 title.textContent = value || "Unnamed Activity";
+                const tabName = root.querySelector(`[data-profile-id="${CSS.escape(profile.id)}"] .ca-profile-tab-name`);
+                if (tabName) tabName.textContent = value || "Unnamed Activity";
                 this.save();
             }, "Only used inside this plugin."),
             this.field("Discord Application ID", profile.clientId, value => {
@@ -982,7 +1046,7 @@ module.exports = class CustomActivities {
             this.field("Activity name", profile.activityName, value => {
                 profile.activityName = value;
                 this.save();
-            }),
+            }, "Discord may use the application name depending on the current client implementation."),
             this.select("Activity type", profile.type, value => {
                 profile.type = Number(value);
                 this.save();
@@ -1081,6 +1145,9 @@ module.exports = class CustomActivities {
     switchRow(titleText, descriptionText, checked, onChange) {
         const row = document.createElement("div");
         row.className = "ca-switch-row";
+        row.setAttribute("role", "switch");
+        row.setAttribute("tabindex", "0");
+        row.setAttribute("aria-checked", String(Boolean(checked)));
 
         const copy = document.createElement("div");
         copy.className = "ca-switch-copy";
@@ -1097,12 +1164,21 @@ module.exports = class CustomActivities {
 
         const toggle = document.createElement("div");
         toggle.className = `ca-switch${checked ? " is-on" : ""}`;
-
         row.append(copy, toggle);
-        row.addEventListener("click", () => {
+
+        const toggleValue = () => {
             checked = !checked;
             toggle.classList.toggle("is-on", checked);
+            row.setAttribute("aria-checked", String(checked));
             onChange(checked);
+        };
+
+        row.addEventListener("click", toggleValue);
+        row.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                toggleValue();
+            }
         });
 
         return row;
@@ -1111,18 +1187,30 @@ module.exports = class CustomActivities {
     inlineToggle(titleText, checked, onChange) {
         const row = document.createElement("div");
         row.className = "ca-inline-toggle full";
+        row.setAttribute("role", "switch");
+        row.setAttribute("tabindex", "0");
+        row.setAttribute("aria-checked", String(Boolean(checked)));
 
         const title = document.createElement("span");
         title.textContent = titleText;
 
         const toggle = document.createElement("div");
         toggle.className = `ca-switch${checked ? " is-on" : ""}`;
-
         row.append(title, toggle);
-        row.addEventListener("click", () => {
+
+        const toggleValue = () => {
             checked = !checked;
             toggle.classList.toggle("is-on", checked);
+            row.setAttribute("aria-checked", String(checked));
             onChange(checked);
+        };
+
+        row.addEventListener("click", toggleValue);
+        row.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                toggleValue();
+            }
         });
 
         return row;
