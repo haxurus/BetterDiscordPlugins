@@ -1,7 +1,7 @@
 /**
  * @name CustomActivities
  * @author Haxurus
- * @version 1.4.0
+ * @version 1.4.1
  * @description Create, save and switch fully customized Discord Rich Presence activities directly from BetterDiscord.
  * @source https://github.com/haxurus/BetterDiscordPlugins/tree/master/Plugins/CustomActivities
  */
@@ -9,7 +9,7 @@
 module.exports = class CustomActivities {
     constructor() {
         this.pluginName = "CustomActivities";
-        this.version = "1.4.0";
+        this.version = "1.4.1";
         this.defaultSettings = {
             autoStart: false,
             protectActivity: true,
@@ -667,7 +667,7 @@ module.exports = class CustomActivities {
         `;
         const grid = this.grid();
         grid.append(
-            this.input("Profile name", profile.profileName, value => this.setProfileValue(profile, "profileName", value, root), "Only visible inside this plugin."),
+            this.input("Profile name", profile.profileName, value => this.setProfileValue(profile, "profileName", value, root, true), "Only visible inside this plugin."),
             this.input("Application ID / Client ID", profile.clientId, value => this.setProfileValue(profile, "clientId", value, root), "Copy it from the Discord Developer Portal."),
             this.input("Activity name", profile.activityName, value => this.setProfileValue(profile, "activityName", value, root), "Discord may prefer the application name."),
             this.select("Activity type", profile.type, [
@@ -994,95 +994,105 @@ module.exports = class CustomActivities {
             .ca-root * { box-sizing: border-box; }
 
             .ca-root {
-                --ca-radius: 12px;
-                --ca-border: color-mix(in srgb, var(--background-modifier-accent) 76%, transparent);
-                --ca-surface: color-mix(in srgb, var(--background-secondary) 94%, transparent);
-                --ca-raised: color-mix(in srgb, var(--background-tertiary) 88%, var(--background-secondary));
+                --ca-radius: 14px;
+                --ca-border: color-mix(in srgb, var(--background-modifier-accent) 82%, transparent);
+                --ca-surface: color-mix(in srgb, var(--background-secondary) 96%, transparent);
+                --ca-raised: color-mix(in srgb, var(--background-tertiary) 90%, var(--background-secondary));
+                --ca-text-xs: clamp(10px, .72vw, 11px);
+                --ca-text-sm: clamp(11px, .82vw, 12px);
+                --ca-text-md: clamp(12px, .92vw, 14px);
+                --ca-text-lg: clamp(14px, 1.08vw, 16px);
+                --ca-title: clamp(22px, 1.7vw, 28px);
                 width: 100%;
+                min-width: 0;
                 color: var(--text-normal);
                 font-family: var(--font-primary, sans-serif);
+                font-size: var(--ca-text-md);
             }
 
             .ca-studio {
                 display: grid;
-                grid-template-columns: 224px minmax(0, 1fr);
-                min-height: 620px;
+                grid-template-columns: clamp(230px, 22vw, 280px) minmax(0, 1fr);
+                width: 100%;
+                min-width: 0;
+                min-height: 660px;
                 overflow: hidden;
                 border: 1px solid var(--ca-border);
-                border-radius: 16px;
+                border-radius: 18px;
                 background: var(--background-primary);
-                box-shadow: 0 10px 28px rgba(0,0,0,.12);
+                box-shadow: 0 12px 34px rgba(0,0,0,.16);
             }
 
             .ca-sidebar {
                 display: flex;
                 flex-direction: column;
                 min-width: 0;
-                padding: 14px;
+                min-height: 0;
+                padding: 18px;
                 border-right: 1px solid var(--ca-border);
-                background: color-mix(in srgb, var(--background-secondary) 96%, transparent);
+                background: color-mix(in srgb, var(--background-secondary) 97%, transparent);
             }
 
             .ca-brand {
                 display: flex;
                 align-items: center;
-                gap: 10px;
-                padding: 2px 2px 14px;
+                gap: 12px;
+                padding: 2px 2px 17px;
             }
 
             .ca-brand-icon {
                 display: grid;
                 place-items: center;
-                width: 34px;
-                height: 34px;
+                width: 42px;
+                height: 42px;
                 flex: 0 0 auto;
-                border-radius: 10px;
+                border-radius: 12px;
                 background: var(--brand-500, #5865f2);
                 color: white;
-                box-shadow: 0 6px 18px color-mix(in srgb, var(--brand-500, #5865f2) 28%, transparent);
+                box-shadow: 0 7px 20px color-mix(in srgb, var(--brand-500, #5865f2) 30%, transparent);
             }
 
-            .ca-brand-icon svg { width: 20px; height: 20px; }
+            .ca-brand-icon svg { width: 24px; height: 24px; }
             .ca-brand-copy { display: flex; flex-direction: column; min-width: 0; }
-            .ca-brand-copy strong { color: var(--header-primary); font-size: 13px; line-height: 1.2; }
-            .ca-brand-copy span { margin-top: 2px; color: var(--text-muted); font-size: 9px; }
+            .ca-brand-copy strong { color: var(--header-primary); font-size: var(--ca-text-lg); line-height: 1.2; }
+            .ca-brand-copy span { margin-top: 3px; color: var(--text-muted); font-size: var(--ca-text-xs); }
 
             .ca-status-card {
                 display: grid;
                 grid-template-columns: auto minmax(0,1fr) auto;
                 align-items: center;
-                gap: 8px;
-                min-height: 49px;
-                margin-bottom: 10px;
-                padding: 8px 9px;
+                gap: 10px;
+                min-height: 58px;
+                margin-bottom: 12px;
+                padding: 10px 11px;
                 border: 1px solid var(--ca-border);
-                border-radius: 10px;
+                border-radius: 12px;
                 background: var(--background-primary);
             }
 
             .ca-status-indicator {
-                width: 8px;
-                height: 8px;
+                width: 9px;
+                height: 9px;
                 border-radius: 50%;
                 background: var(--text-muted);
             }
 
             .ca-status-card.active .ca-status-indicator {
                 background: var(--status-positive, #23a55a);
-                box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-positive, #23a55a) 18%, transparent);
+                box-shadow: 0 0 0 4px color-mix(in srgb, var(--status-positive, #23a55a) 17%, transparent);
             }
 
             .ca-status-card > div { display: flex; flex-direction: column; min-width: 0; }
-            .ca-status-card strong { overflow: hidden; color: var(--header-primary); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-            .ca-status-card span:not(.ca-status-indicator) { margin-top: 2px; color: var(--text-muted); font-size: 8px; }
+            .ca-status-card strong { overflow: hidden; color: var(--header-primary); font-size: var(--ca-text-sm); text-overflow: ellipsis; white-space: nowrap; }
+            .ca-status-card span:not(.ca-status-indicator) { margin-top: 3px; color: var(--text-muted); font-size: var(--ca-text-xs); }
 
             .ca-side-heading {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 15px 4px 7px;
+                padding: 18px 5px 9px;
                 color: var(--text-muted);
-                font-size: 9px;
+                font-size: var(--ca-text-xs);
                 font-weight: 800;
                 letter-spacing: .07em;
                 text-transform: uppercase;
@@ -1091,43 +1101,42 @@ module.exports = class CustomActivities {
             .ca-side-heading small {
                 display: grid;
                 place-items: center;
-                min-width: 18px;
-                height: 18px;
-                padding: 0 5px;
+                min-width: 22px;
+                height: 22px;
+                padding: 0 6px;
                 border-radius: 999px;
                 background: var(--background-modifier-selected);
                 color: var(--text-muted);
-                font-size: 8px;
+                font-size: var(--ca-text-xs);
             }
 
             .ca-profile-list {
                 display: flex;
                 flex: 1;
                 flex-direction: column;
-                gap: 4px;
-                min-height: 80px;
-                max-height: 290px;
+                gap: 5px;
+                min-height: 90px;
                 overflow: auto;
-                margin: 0 -4px;
-                padding: 0 4px;
+                margin: 0 -5px;
+                padding: 0 5px;
             }
 
             .ca-profile-list-empty {
-                padding: 9px 5px;
+                padding: 10px 6px;
                 color: var(--text-muted);
-                font-size: 10px;
-                line-height: 1.4;
+                font-size: var(--ca-text-sm);
+                line-height: 1.45;
             }
 
             .ca-profile {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 10px;
                 width: 100%;
-                min-height: 42px;
-                padding: 6px;
+                min-height: 50px;
+                padding: 8px;
                 border: 0;
-                border-radius: 9px;
+                border-radius: 10px;
                 background: transparent;
                 color: inherit;
                 text-align: left;
@@ -1142,13 +1151,13 @@ module.exports = class CustomActivities {
             .ca-profile-avatar {
                 display: grid;
                 place-items: center;
-                width: 29px;
-                height: 29px;
+                width: 34px;
+                height: 34px;
                 flex: 0 0 auto;
-                border-radius: 9px;
+                border-radius: 10px;
                 background: var(--background-primary);
                 color: var(--header-primary);
-                font-size: 11px;
+                font-size: var(--ca-text-md);
                 font-weight: 800;
             }
 
@@ -1158,16 +1167,16 @@ module.exports = class CustomActivities {
             }
 
             .ca-profile-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; }
-            .ca-profile-copy strong { overflow: hidden; color: var(--header-primary); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-            .ca-profile-copy small { overflow: hidden; margin-top: 2px; color: var(--text-muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
-            .ca-live-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--status-positive, #23a55a); }
+            .ca-profile-copy strong { overflow: hidden; color: var(--header-primary); font-size: var(--ca-text-sm); text-overflow: ellipsis; white-space: nowrap; }
+            .ca-profile-copy small { overflow: hidden; margin-top: 3px; color: var(--text-muted); font-size: var(--ca-text-xs); text-overflow: ellipsis; white-space: nowrap; }
+            .ca-live-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--status-positive, #23a55a); }
 
             .ca-side-settings {
                 display: flex;
                 flex-direction: column;
-                gap: 2px;
-                margin: 13px 0 9px;
-                padding: 7px;
+                gap: 3px;
+                margin: 15px 0 11px;
+                padding: 9px 7px;
                 border-top: 1px solid var(--ca-border);
                 border-bottom: 1px solid var(--ca-border);
             }
@@ -1177,21 +1186,21 @@ module.exports = class CustomActivities {
                 align-items: center;
                 justify-content: space-between;
                 width: 100%;
-                min-height: 31px;
-                padding: 4px 2px;
+                min-height: 38px;
+                padding: 5px 2px;
                 border: 0;
                 background: transparent;
                 color: var(--text-normal);
                 font: inherit;
-                font-size: 9px;
+                font-size: var(--ca-text-sm);
                 text-align: left;
                 cursor: pointer;
             }
 
             .ca-toggle {
-                width: 30px;
-                height: 17px;
-                padding: 2px;
+                width: 36px;
+                height: 21px;
+                padding: 3px;
                 flex: 0 0 auto;
                 border-radius: 999px;
                 background: var(--background-modifier-selected);
@@ -1200,22 +1209,24 @@ module.exports = class CustomActivities {
 
             .ca-toggle i {
                 display: block;
-                width: 13px;
-                height: 13px;
+                width: 15px;
+                height: 15px;
                 border-radius: 50%;
                 background: white;
                 transition: transform .12s ease;
             }
 
             .ca-toggle.on { background: var(--brand-500, #5865f2); }
-            .ca-toggle.on i { transform: translateX(13px); }
+            .ca-toggle.on i { transform: translateX(15px); }
 
             .ca-workspace {
                 display: flex;
                 flex-direction: column;
-                gap: 12px;
+                gap: 15px;
                 min-width: 0;
-                padding: 20px;
+                min-height: 0;
+                overflow: auto;
+                padding: clamp(20px, 2.2vw, 30px);
                 background: var(--background-primary);
             }
 
@@ -1223,34 +1234,34 @@ module.exports = class CustomActivities {
                 display: flex;
                 align-items: flex-start;
                 justify-content: space-between;
-                gap: 14px;
+                gap: 16px;
             }
 
-            .ca-eyebrow { color: var(--text-muted); font-size: 8px; font-weight: 800; letter-spacing: .09em; }
-            .ca-workspace-title-row { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
-            .ca-workspace-title h2 { margin: 0; color: var(--header-primary); font-size: 20px; line-height: 1.2; }
-            .ca-workspace-title p { margin: 4px 0 0; color: var(--text-muted); font-size: 10px; }
-            .ca-header-actions, .ca-actionbar-buttons { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+            .ca-eyebrow { color: var(--text-muted); font-size: var(--ca-text-xs); font-weight: 800; letter-spacing: .09em; }
+            .ca-workspace-title-row { display: flex; align-items: center; gap: 10px; margin-top: 3px; }
+            .ca-workspace-title h2 { margin: 0; color: var(--header-primary); font-size: var(--ca-title); line-height: 1.18; }
+            .ca-workspace-title p { margin: 5px 0 0; color: var(--text-muted); font-size: var(--ca-text-sm); }
+            .ca-header-actions, .ca-actionbar-buttons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
             .ca-active-pill {
                 display: inline-flex;
                 align-items: center;
-                gap: 5px;
-                padding: 3px 7px;
+                gap: 6px;
+                padding: 4px 8px;
                 border-radius: 999px;
                 background: color-mix(in srgb, var(--status-positive, #23a55a) 14%, transparent);
                 color: var(--status-positive, #23a55a);
-                font-size: 8px;
+                font-size: var(--ca-text-xs);
                 font-weight: 800;
                 text-transform: uppercase;
             }
 
-            .ca-active-pill span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+            .ca-active-pill span { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 
             .ca-overview {
                 display: grid;
-                grid-template-columns: minmax(0, 1.35fr) minmax(220px, .65fr);
-                gap: 10px;
+                grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+                gap: 12px;
             }
 
             .ca-preview-panel,
@@ -1268,98 +1279,98 @@ module.exports = class CustomActivities {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                min-height: 43px;
-                padding: 9px 11px;
+                min-height: 54px;
+                padding: 11px 14px;
                 border-bottom: 1px solid var(--ca-border);
             }
 
             .ca-panel-heading > div { display: flex; flex-direction: column; }
-            .ca-panel-heading strong { color: var(--header-primary); font-size: 10px; }
-            .ca-panel-heading span { margin-top: 2px; color: var(--text-muted); font-size: 8px; }
+            .ca-panel-heading strong { color: var(--header-primary); font-size: var(--ca-text-md); }
+            .ca-panel-heading span { margin-top: 3px; color: var(--text-muted); font-size: var(--ca-text-xs); }
 
-            .ca-preview-host { padding: 11px; }
-            .ca-discord-preview { padding: 11px; border-radius: 9px; background: var(--background-primary); }
-            .ca-preview-label { margin-bottom: 8px; color: var(--header-secondary); font-size: 8px; font-weight: 800; letter-spacing: .04em; }
-            .ca-preview-content { display: flex; gap: 9px; min-width: 0; }
+            .ca-preview-host { padding: 14px; }
+            .ca-discord-preview { padding: 14px; border-radius: 11px; background: var(--background-primary); }
+            .ca-preview-label { margin-bottom: 10px; color: var(--header-secondary); font-size: var(--ca-text-xs); font-weight: 800; letter-spacing: .04em; }
+            .ca-preview-content { display: flex; gap: 12px; min-width: 0; }
 
             .ca-preview-image {
                 position: relative;
                 display: grid;
                 place-items: center;
-                width: 58px;
-                height: 58px;
+                width: clamp(68px, 6.3vw, 82px);
+                height: clamp(68px, 6.3vw, 82px);
                 flex: 0 0 auto;
                 overflow: visible;
-                border-radius: 9px;
+                border-radius: 12px;
                 background: linear-gradient(145deg, var(--brand-500, #5865f2), color-mix(in srgb, var(--brand-500, #5865f2) 62%, black));
                 color: white;
-                font-size: 20px;
+                font-size: clamp(24px, 2vw, 30px);
                 font-weight: 800;
             }
 
             .ca-preview-image i {
                 position: absolute;
-                right: -4px;
-                bottom: -4px;
-                width: 20px;
-                height: 20px;
-                border: 3px solid var(--background-primary);
+                right: -5px;
+                bottom: -5px;
+                width: 24px;
+                height: 24px;
+                border: 4px solid var(--background-primary);
                 border-radius: 50%;
                 background: var(--status-positive, #23a55a);
             }
 
-            .ca-preview-copy { display: flex; flex-direction: column; min-width: 0; padding-top: 1px; }
+            .ca-preview-copy { display: flex; flex-direction: column; min-width: 0; padding-top: 2px; }
             .ca-preview-copy strong, .ca-preview-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-            .ca-preview-copy strong { color: var(--header-primary); font-size: 10px; }
-            .ca-preview-copy span { margin-top: 3px; color: var(--text-normal); font-size: 9px; }
-            .ca-preview-copy small { margin-top: 3px; color: var(--text-muted); font-size: 8px; }
+            .ca-preview-copy strong { color: var(--header-primary); font-size: var(--ca-text-md); }
+            .ca-preview-copy span { margin-top: 4px; color: var(--text-normal); font-size: var(--ca-text-sm); }
+            .ca-preview-copy small { margin-top: 4px; color: var(--text-muted); font-size: var(--ca-text-xs); }
 
-            .ca-preview-buttons { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 5px; margin-top: 9px; }
-            .ca-preview-buttons span { overflow: hidden; padding: 5px 8px; border-radius: 5px; background: var(--background-modifier-selected); color: var(--text-normal); font-size: 8px; font-weight: 700; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+            .ca-preview-buttons { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; margin-top: 12px; }
+            .ca-preview-buttons span { overflow: hidden; padding: 7px 10px; border-radius: 6px; background: var(--background-modifier-selected); color: var(--text-normal); font-size: var(--ca-text-xs); font-weight: 700; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 
             .ca-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1px; background: var(--ca-border); }
-            .ca-summary-grid > div { display: flex; flex-direction: column; min-width: 0; min-height: 48px; padding: 9px 10px; background: var(--ca-surface); }
-            .ca-summary-grid span { color: var(--text-muted); font-size: 8px; }
-            .ca-summary-grid strong { overflow: hidden; margin-top: 4px; color: var(--header-primary); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+            .ca-summary-grid > div { display: flex; flex-direction: column; min-width: 0; min-height: 62px; padding: 12px; background: var(--ca-surface); }
+            .ca-summary-grid span { color: var(--text-muted); font-size: var(--ca-text-xs); }
+            .ca-summary-grid strong { overflow: hidden; margin-top: 5px; color: var(--header-primary); font-size: var(--ca-text-sm); text-overflow: ellipsis; white-space: nowrap; }
 
             .ca-tabs {
                 display: flex;
                 align-items: center;
-                gap: 2px;
-                padding: 3px;
+                gap: 3px;
                 width: fit-content;
-                border-radius: 9px;
+                padding: 4px;
+                border-radius: 10px;
                 background: var(--background-secondary);
             }
 
             .ca-tab {
-                min-width: 74px;
-                min-height: 30px;
-                padding: 5px 10px;
+                min-width: 92px;
+                min-height: 36px;
+                padding: 7px 13px;
                 border: 0;
-                border-radius: 7px;
+                border-radius: 8px;
                 background: transparent;
                 color: var(--text-muted);
                 font: inherit;
-                font-size: 9px;
+                font-size: var(--ca-text-sm);
                 font-weight: 700;
                 cursor: pointer;
             }
 
             .ca-tab:hover { color: var(--text-normal); }
-            .ca-tab.active { background: var(--background-modifier-selected); color: var(--header-primary); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+            .ca-tab.active { background: var(--background-modifier-selected); color: var(--header-primary); box-shadow: 0 1px 4px rgba(0,0,0,.14); }
 
             .ca-form-panel { overflow: hidden; }
-            .ca-form-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 13px 10px; border-bottom: 1px solid var(--ca-border); }
-            .ca-form-heading h3 { margin: 0; color: var(--header-primary); font-size: 12px; }
-            .ca-form-heading p { margin: 3px 0 0; color: var(--text-muted); font-size: 9px; }
+            .ca-form-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 15px 16px 13px; border-bottom: 1px solid var(--ca-border); }
+            .ca-form-heading h3 { margin: 0; color: var(--header-primary); font-size: var(--ca-text-lg); }
+            .ca-form-heading p { margin: 4px 0 0; color: var(--text-muted); font-size: var(--ca-text-sm); }
 
             .ca-section-badge {
-                padding: 3px 6px;
-                border-radius: 5px;
+                padding: 4px 7px;
+                border-radius: 6px;
                 background: var(--background-modifier-selected);
                 color: var(--text-muted);
-                font-size: 7px;
+                font-size: var(--ca-text-xs);
                 font-weight: 800;
                 letter-spacing: .06em;
             }
@@ -1367,42 +1378,42 @@ module.exports = class CustomActivities {
             .ca-field-grid {
                 display: grid;
                 grid-template-columns: repeat(2, minmax(0,1fr));
-                gap: 12px;
-                padding: 13px;
+                gap: 15px;
+                padding: 16px;
             }
 
-            .ca-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-            .ca-label { color: var(--header-secondary); font-size: 9px; font-weight: 700; }
+            .ca-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+            .ca-label { color: var(--header-secondary); font-size: var(--ca-text-sm); font-weight: 700; }
 
             .ca-input {
                 width: 100%;
-                min-height: 36px;
-                padding: 7px 9px;
+                min-height: 42px;
+                padding: 9px 11px;
                 border: 1px solid transparent;
-                border-radius: 7px;
+                border-radius: 8px;
                 outline: none;
                 background: var(--background-primary);
                 color: var(--text-normal);
                 font: inherit;
-                font-size: 10px;
+                font-size: var(--ca-text-md);
                 transition: border-color .12s ease, box-shadow .12s ease;
             }
 
             .ca-input:hover { border-color: var(--ca-border); }
             .ca-input:focus { border-color: var(--brand-500, #5865f2); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-500, #5865f2) 15%, transparent); }
             .ca-select { cursor: pointer; }
-            .ca-description { color: var(--text-muted); font-size: 8px; line-height: 1.35; }
+            .ca-description { color: var(--text-muted); font-size: var(--ca-text-xs); line-height: 1.4; }
 
             .ca-inline-switch {
                 grid-column: 1 / -1;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 14px;
-                min-height: 48px;
-                padding: 8px 10px;
+                gap: 16px;
+                min-height: 58px;
+                padding: 10px 12px;
                 border: 1px solid var(--ca-border);
-                border-radius: 8px;
+                border-radius: 10px;
                 background: var(--background-primary);
                 color: var(--text-normal);
                 font: inherit;
@@ -1411,34 +1422,35 @@ module.exports = class CustomActivities {
             }
 
             .ca-inline-switch-copy { display: flex; flex-direction: column; min-width: 0; }
-            .ca-inline-switch-copy strong { color: var(--header-primary); font-size: 9px; }
-            .ca-inline-switch-copy small { margin-top: 2px; color: var(--text-muted); font-size: 8px; }
+            .ca-inline-switch-copy strong { color: var(--header-primary); font-size: var(--ca-text-sm); }
+            .ca-inline-switch-copy small { margin-top: 3px; color: var(--text-muted); font-size: var(--ca-text-xs); }
 
             .ca-actionbar {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                gap: 12px;
-                padding: 10px 11px;
+                gap: 14px;
+                margin-top: auto;
+                padding: 12px 14px;
                 position: sticky;
                 bottom: 0;
                 z-index: 3;
-                box-shadow: 0 -8px 18px color-mix(in srgb, var(--background-primary) 75%, transparent);
+                box-shadow: 0 -8px 22px color-mix(in srgb, var(--background-primary) 78%, transparent);
             }
 
-            .ca-startup-state { display: flex; align-items: center; gap: 8px; min-width: 0; }
+            .ca-startup-state { display: flex; align-items: center; gap: 10px; min-width: 0; }
             .ca-startup-state > div { display: flex; flex-direction: column; min-width: 0; }
-            .ca-startup-state strong { color: var(--header-primary); font-size: 9px; }
-            .ca-startup-state span:not(.ca-checkmark) { margin-top: 2px; color: var(--text-muted); font-size: 8px; }
-            .ca-checkmark { display: grid; place-items: center; width: 24px; height: 24px; flex: 0 0 auto; border-radius: 50%; background: color-mix(in srgb, var(--status-positive, #23a55a) 15%, transparent); color: var(--status-positive, #23a55a); font-size: 11px; font-weight: 900; }
+            .ca-startup-state strong { color: var(--header-primary); font-size: var(--ca-text-sm); }
+            .ca-startup-state span:not(.ca-checkmark) { margin-top: 3px; color: var(--text-muted); font-size: var(--ca-text-xs); }
+            .ca-checkmark { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 auto; border-radius: 50%; background: color-mix(in srgb, var(--status-positive, #23a55a) 15%, transparent); color: var(--status-positive, #23a55a); font-size: var(--ca-text-md); font-weight: 900; }
 
             .ca-button {
-                min-height: 32px;
-                padding: 6px 11px;
+                min-height: 38px;
+                padding: 8px 13px;
                 border: 0;
-                border-radius: 7px;
+                border-radius: 8px;
                 font: inherit;
-                font-size: 9px;
+                font-size: var(--ca-text-sm);
                 font-weight: 700;
                 cursor: pointer;
                 transition: filter .12s ease, background .12s ease, transform .12s ease;
@@ -1456,12 +1468,12 @@ module.exports = class CustomActivities {
             .ca-icon-button {
                 display: grid;
                 place-items: center;
-                width: 31px;
-                height: 31px;
+                width: 38px;
+                height: 38px;
                 flex: 0 0 auto;
                 padding: 0;
                 border: 0;
-                border-radius: 7px;
+                border-radius: 8px;
                 background: var(--background-modifier-selected);
                 color: var(--interactive-normal);
                 cursor: pointer;
@@ -1469,9 +1481,9 @@ module.exports = class CustomActivities {
 
             .ca-icon-button:hover { background: var(--background-modifier-hover); color: var(--interactive-hover); }
             .ca-icon-button.danger:hover { color: var(--text-danger, #f23f42); }
-            .ca-icon-button svg { width: 16px; height: 16px; }
-            .ca-status-card .ca-icon-button { width: 25px; height: 25px; }
-            .ca-status-card .ca-icon-button svg { width: 13px; height: 13px; }
+            .ca-icon-button svg { width: 19px; height: 19px; }
+            .ca-status-card .ca-icon-button { width: 30px; height: 30px; }
+            .ca-status-card .ca-icon-button svg { width: 15px; height: 15px; }
 
             .ca-empty-state {
                 display: grid;
@@ -1479,7 +1491,7 @@ module.exports = class CustomActivities {
                 align-content: center;
                 flex: 1;
                 min-height: 520px;
-                padding: 40px;
+                padding: 44px;
                 text-align: center;
             }
 
@@ -1487,20 +1499,20 @@ module.exports = class CustomActivities {
                 position: relative;
                 display: grid;
                 place-items: center;
-                width: 70px;
-                height: 70px;
-                margin-bottom: 17px;
+                width: 82px;
+                height: 82px;
+                margin-bottom: 19px;
                 border: 1px solid var(--ca-border);
                 border-radius: 50%;
             }
 
             .ca-empty-orbit::before,
             .ca-empty-orbit::after { content: ""; position: absolute; border: 1px solid var(--ca-border); border-radius: 50%; }
-            .ca-empty-orbit::before { inset: 10px; }
-            .ca-empty-orbit::after { inset: 21px; background: var(--brand-500, #5865f2); border-color: transparent; }
-            .ca-empty-orbit span { width: 9px; height: 9px; border-radius: 50%; background: var(--status-positive, #23a55a); transform: translate(30px, -13px); }
-            .ca-empty-state h2 { margin: 0; color: var(--header-primary); font-size: 18px; }
-            .ca-empty-state p { max-width: 460px; margin: 7px 0 16px; color: var(--text-muted); font-size: 10px; line-height: 1.5; }
+            .ca-empty-orbit::before { inset: 12px; }
+            .ca-empty-orbit::after { inset: 25px; background: var(--brand-500, #5865f2); border-color: transparent; }
+            .ca-empty-orbit span { width: 10px; height: 10px; border-radius: 50%; background: var(--status-positive, #23a55a); transform: translate(35px, -15px); }
+            .ca-empty-state h2 { margin: 0; color: var(--header-primary); font-size: var(--ca-title); }
+            .ca-empty-state p { max-width: 520px; margin: 9px 0 18px; color: var(--text-muted); font-size: var(--ca-text-md); line-height: 1.5; }
 
             .ca-quick-button { position: relative !important; }
             .ca-quick-button svg { width: 20px; height: 20px; }
@@ -1512,7 +1524,7 @@ module.exports = class CustomActivities {
                 z-index: 10000;
                 display: grid;
                 place-items: center;
-                padding: 24px;
+                padding: 16px;
                 background: rgba(0,0,0,.62);
                 backdrop-filter: blur(5px);
                 opacity: 0;
@@ -1523,58 +1535,82 @@ module.exports = class CustomActivities {
 
             .ca-manager-dialog {
                 position: relative;
-                width: min(1120px, calc(100vw - 48px));
-                max-height: calc(100vh - 48px);
-                overflow: auto;
+                width: min(1320px, calc(100vw - 32px));
+                height: min(900px, calc(100vh - 32px));
+                min-height: min(620px, calc(100vh - 32px));
+                overflow: hidden;
                 border: 1px solid var(--ca-border, var(--background-modifier-accent));
-                border-radius: 18px;
+                border-radius: 20px;
                 background: var(--background-primary);
-                box-shadow: 0 28px 90px rgba(0,0,0,.48);
+                box-shadow: 0 30px 96px rgba(0,0,0,.52);
             }
 
-            .ca-manager-content { width: 100%; }
-            .ca-manager-content .ca-studio { min-height: min(760px, calc(100vh - 48px)); border: 0; border-radius: 18px; box-shadow: none; }
+            .ca-manager-content { width: 100%; height: 100%; min-height: 0; }
+            .ca-manager-content .ca-root { height: 100%; }
+            .ca-manager-content .ca-studio { height: 100%; min-height: 0; border: 0; border-radius: 20px; box-shadow: none; }
 
             .ca-manager-close {
-                position: sticky;
-                top: 10px;
-                float: right;
-                z-index: 20;
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                z-index: 30;
                 display: grid;
                 place-items: center;
-                width: 30px;
-                height: 30px;
-                margin: 10px 10px -40px 0;
+                width: 36px;
+                height: 36px;
                 border: 0;
-                border-radius: 8px;
+                border-radius: 9px;
                 background: var(--background-modifier-selected);
                 color: var(--interactive-normal);
-                font-size: 20px;
+                font-size: 23px;
                 line-height: 1;
                 cursor: pointer;
             }
 
             .ca-manager-close:hover { background: var(--background-modifier-hover); color: var(--interactive-hover); }
 
-            @media (max-width: 940px) {
-                .ca-studio { grid-template-columns: 190px minmax(0,1fr); }
+            @media (max-width: 1080px) {
+                .ca-studio { grid-template-columns: 220px minmax(0,1fr); }
                 .ca-overview { grid-template-columns: 1fr; }
                 .ca-summary-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
             }
 
-            @media (max-width: 760px) {
-                .ca-studio { display: flex; flex-direction: column; }
-                .ca-sidebar { border-right: 0; border-bottom: 1px solid var(--ca-border); }
-                .ca-profile-list { max-height: 170px; }
+            @media (max-width: 840px) {
+                .ca-studio { display: flex; flex-direction: column; overflow: auto; }
+                .ca-sidebar { flex: 0 0 auto; border-right: 0; border-bottom: 1px solid var(--ca-border); }
+                .ca-profile-list { flex-direction: row; flex: 0 0 auto; min-height: 0; max-height: none; overflow-x: auto; overflow-y: hidden; padding-bottom: 3px; }
+                .ca-profile { min-width: 190px; width: auto; }
+                .ca-side-settings { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); margin: 12px 0 10px; }
+                .ca-workspace { overflow: visible; padding: 18px; }
+                .ca-workspace-header { padding-right: 42px; }
+                .ca-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+            }
+
+            @media (max-width: 620px) {
+                .ca-manager-overlay { padding: 8px; }
+                .ca-manager-dialog { width: calc(100vw - 16px); height: calc(100vh - 16px); min-height: 0; border-radius: 14px; }
+                .ca-manager-content .ca-studio { border-radius: 14px; }
+                .ca-sidebar { padding: 14px; }
+                .ca-brand-copy span { display: none; }
                 .ca-workspace { padding: 14px; }
                 .ca-workspace-header, .ca-actionbar { align-items: stretch; flex-direction: column; }
-                .ca-field-grid { grid-template-columns: 1fr; }
+                .ca-field-grid { grid-template-columns: 1fr; padding: 14px; }
                 .ca-inline-switch { grid-column: auto; }
-                .ca-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
                 .ca-tabs { width: 100%; }
                 .ca-tab { flex: 1; min-width: 0; }
-                .ca-manager-overlay { padding: 10px; }
-                .ca-manager-dialog { width: calc(100vw - 20px); max-height: calc(100vh - 20px); }
+                .ca-preview-buttons { grid-template-columns: 1fr; }
+            }
+
+            @media (max-height: 760px) and (min-width: 841px) {
+                .ca-sidebar { padding-top: 14px; padding-bottom: 14px; }
+                .ca-brand { padding-bottom: 12px; }
+                .ca-side-heading { padding-top: 12px; }
+                .ca-profile-list { min-height: 70px; }
+                .ca-workspace { gap: 11px; padding-top: 16px; padding-bottom: 16px; }
+                .ca-preview-image { width: 64px; height: 64px; }
+                .ca-panel-heading { min-height: 48px; }
+                .ca-field-grid { gap: 11px 14px; padding-top: 12px; padding-bottom: 12px; }
+                .ca-actionbar { padding-top: 9px; padding-bottom: 9px; }
             }
         `;
 
