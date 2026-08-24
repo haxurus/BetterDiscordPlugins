@@ -1,13 +1,16 @@
 /**
  * @name CustomActivities
  * @author Haxurus
- * @version 1.2.0
+ * @version 1.2.1
  * @description Create, save and switch fully customized Discord Rich Presence activities directly from BetterDiscord.
+ * @source https://github.com/haxurus/BetterDiscordPlugins/tree/master/Plugins/CustomActivities
+ * @website https://github.com/haxurus/BetterDiscordPlugins/tree/master/Plugins/CustomActivities
  */
 
 module.exports = class CustomActivities {
     constructor() {
         this.name = "CustomActivities";
+        this.version = "1.2.1";
         this.styleId = "CustomActivitiesStyles";
         this.defaults = {
             autoStart: false,
@@ -327,11 +330,11 @@ module.exports = class CustomActivities {
             }
 
             .ca-modal-host {
-                width: clamp(420px, 62vw, 760px);
-                max-width: calc(100vw - 96px);
-                max-height: 70vh;
+                width: clamp(440px, 64vw, 780px);
+                max-width: calc(100vw - 80px);
+                max-height: 72vh;
                 overflow: auto;
-                padding: 2px 5px 2px 0;
+                padding-right: 4px;
             }
 
             .ca-hero {
@@ -347,21 +350,8 @@ module.exports = class CustomActivities {
             }
 
             .ca-hero-copy { min-width: 0; }
-
-            .ca-title {
-                margin: 0;
-                color: var(--header-primary);
-                font-size: 18px;
-                line-height: 1.2;
-                font-weight: 700;
-            }
-
-            .ca-subtitle {
-                margin: 4px 0 0;
-                color: var(--text-muted);
-                font-size: 12px;
-                line-height: 1.45;
-            }
+            .ca-title { margin: 0; color: var(--header-primary); font-size: 18px; line-height: 1.2; font-weight: 700; }
+            .ca-subtitle { margin: 4px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.45; }
 
             .ca-status {
                 display: inline-flex;
@@ -377,13 +367,7 @@ module.exports = class CustomActivities {
                 white-space: nowrap;
             }
 
-            .ca-status-dot {
-                width: 7px;
-                height: 7px;
-                border-radius: 50%;
-                background: var(--text-muted);
-            }
-
+            .ca-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
             .ca-status.is-active { color: var(--text-positive, #23a55a); }
             .ca-status.is-active .ca-status-dot { background: var(--status-positive, #23a55a); }
 
@@ -409,19 +393,8 @@ module.exports = class CustomActivities {
             }
 
             .ca-switch-copy { min-width: 0; }
-
-            .ca-switch-title {
-                color: var(--header-primary);
-                font-size: 12px;
-                font-weight: 700;
-            }
-
-            .ca-switch-description {
-                margin-top: 2px;
-                color: var(--text-muted);
-                font-size: 10px;
-                line-height: 1.35;
-            }
+            .ca-switch-title { color: var(--header-primary); font-size: 12px; font-weight: 700; }
+            .ca-switch-description { margin-top: 2px; color: var(--text-muted); font-size: 10px; line-height: 1.35; }
 
             .ca-switch {
                 position: relative;
@@ -476,26 +449,9 @@ module.exports = class CustomActivities {
             }
 
             .ca-profile-tab:hover { background: var(--background-modifier-hover); }
-
-            .ca-profile-tab.is-selected {
-                border-color: var(--brand-500, #5865f2);
-                background: var(--background-modifier-selected);
-                color: var(--header-primary);
-            }
-
-            .ca-profile-tab-name {
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-
-            .ca-profile-tab-dot {
-                width: 7px;
-                height: 7px;
-                flex: 0 0 auto;
-                border-radius: 50%;
-                background: var(--status-positive, #23a55a);
-            }
+            .ca-profile-tab.is-selected { border-color: var(--brand-500, #5865f2); background: var(--background-modifier-selected); color: var(--header-primary); }
+            .ca-profile-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .ca-profile-tab-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--status-positive, #23a55a); }
 
             .ca-editor {
                 overflow: hidden;
@@ -514,23 +470,8 @@ module.exports = class CustomActivities {
                 background: var(--background-secondary-alt, var(--background-secondary));
             }
 
-            .ca-editor-title {
-                min-width: 0;
-                overflow: hidden;
-                color: var(--header-primary);
-                font-size: 14px;
-                font-weight: 700;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-
-            .ca-actions {
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
-                gap: 6px;
-                flex-wrap: wrap;
-            }
+            .ca-editor-title { min-width: 0; overflow: hidden; color: var(--header-primary); font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+            .ca-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
 
             .ca-button {
                 min-height: 31px;
@@ -551,50 +492,15 @@ module.exports = class CustomActivities {
             .ca-button.positive { background: var(--status-positive, #23a55a); }
             .ca-button.danger { background: var(--status-danger, #da373c); }
 
-            .ca-section {
-                padding: 13px 14px 14px;
-                border-bottom: 1px solid var(--background-modifier-accent);
-            }
-
+            .ca-section { padding: 13px 14px 14px; border-bottom: 1px solid var(--background-modifier-accent); }
             .ca-section:last-child { border-bottom: 0; }
+            .ca-section-heading { margin: 0 0 9px; color: var(--header-secondary); font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 
-            .ca-section-heading {
-                margin: 0 0 9px;
-                color: var(--header-secondary);
-                font-size: 10px;
-                font-weight: 800;
-                letter-spacing: .05em;
-                text-transform: uppercase;
-            }
-
-            .ca-grid {
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 10px 11px;
-            }
-
-            .ca-field {
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-                min-width: 0;
-            }
-
+            .ca-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 11px; }
+            .ca-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
             .ca-field.full { grid-column: 1 / -1; }
-
-            .ca-field-label {
-                color: var(--header-secondary);
-                font-size: 10px;
-                line-height: 1.25;
-                font-weight: 750;
-            }
-
-            .ca-field-description {
-                margin-top: 1px;
-                color: var(--text-muted);
-                font-size: 10px;
-                line-height: 1.35;
-            }
+            .ca-field-label { color: var(--header-secondary); font-size: 10px; line-height: 1.25; font-weight: 750; }
+            .ca-field-description { margin-top: 1px; color: var(--text-muted); font-size: 10px; line-height: 1.35; }
 
             .ca-input,
             .ca-select {
@@ -627,12 +533,7 @@ module.exports = class CustomActivities {
             }
 
             .ca-inline-toggle.full { grid-column: 1 / -1; }
-
-            .ca-inline-toggle > span {
-                color: var(--text-normal);
-                font-size: 11px;
-                font-weight: 650;
-            }
+            .ca-inline-toggle > span { color: var(--text-normal); font-size: 11px; font-weight: 650; }
 
             .ca-empty {
                 display: grid;
@@ -864,7 +765,7 @@ module.exports = class CustomActivities {
 
         const title = document.createElement("h2");
         title.className = "ca-title";
-        title.textContent = "Custom Activities";
+        title.textContent = `Custom Activities v${this.version}`;
 
         const subtitle = document.createElement("p");
         subtitle.className = "ca-subtitle";
@@ -1035,7 +936,8 @@ module.exports = class CustomActivities {
             this.field("Profile name", profile.profileName, value => {
                 profile.profileName = value;
                 title.textContent = value || "Unnamed Activity";
-                const tabName = root.querySelector(`[data-profile-id="${CSS.escape(profile.id)}"] .ca-profile-tab-name`);
+                const escapedId = globalThis.CSS?.escape ? CSS.escape(profile.id) : profile.id.replace(/[^a-zA-Z0-9_-]/g, "");
+                const tabName = root.querySelector(`[data-profile-id="${escapedId}"] .ca-profile-tab-name`);
                 if (tabName) tabName.textContent = value || "Unnamed Activity";
                 this.save();
             }, "Only used inside this plugin."),
